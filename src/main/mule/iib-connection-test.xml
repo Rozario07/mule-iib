@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ibm-mq="http://www.mulesoft.org/schema/mule/ibm-mq"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/ibm-mq http://www.mulesoft.org/schema/mule/ibm-mq/current/mule-ibm-mq.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+    
+    <apikit:config xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" name="iib-connection-test-config" raml="iib-connection-test.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <ibm-mq:config name="IBM_MQ_Config" doc:name="IBM MQ Config" doc:id="2c695abe-c826-4dc0-b742-51174e0c077f" >
+		<ibm-mq:connection username="rfqadm" specification="JMS_1_1" targetClient="NO_JMS_COMPLIANT">
+			<ibm-mq:connection-mode >
+				<ibm-mq:client host="esb-test.connect.te.com" queueManager="TUSE1T01" channel="RFQ.CLIENT" />
+			</ibm-mq:connection-mode>
+		</ibm-mq:connection>
+	</ibm-mq:config>
+    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2a85aedf-89ff-4e21-992d-cef04fde20f7">
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="iib-connection-testFlow" doc:id="f58b4b36-573b-4704-8714-82aa1738ca06" >
+		<http:listener doc:name="Listener" doc:id="d43b299a-2660-4ada-82c6-7dff3e100c41" config-ref="HTTP_Listener_config" path="/iib-test"/>
+		<flow-ref doc:name="Flow Reference" doc:id="f076b884-428a-45ae-afcc-b8d72427b8b0" name="iib-mq-test" />
+	</flow>
+    
+    <flow name="iib-mq-test" doc:id="122feafe-dbd7-44e7-99a0-6d0dbad5255a" >
+		<ee:transform doc:name="Transform Message" doc:id="e279a4ba-8118-4f64-a55b-ddd7509ad17d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output text/plain
+---
+"START_METADATA" ++ "\r\n" ++ "SERVICE_LOCATION=FL05" ++ "\r\n" ++ "SERVICE_NAME=QUOTEDETAILS" ++ "\r\n" ++ "USER_ID=rfqadm" ++ "\r\n" ++ "END_METADATA" ++ "\r\n" 
+  ++ "QIN" ++ "053" ++ "01"
+  ++ "99981055"
+  ++ "  01"
+  ++ "00"
+  ++ "5003871555"
+  ++ " "
+  ++ " 2"
+  ++ "D"
+  ++ "00001"
+  ++ "999"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="9dea0587-0fe4-40f3-b6e9-b3345188ac82" message="Request to IIB queue with correlation id -- #[correlationId] \r\n #[payload]"/>
+		<ibm-mq:publish-consume doc:name="Publish consume" doc:id="de4f2cbb-395e-45bc-bda8-b76266961c0b" config-ref="IBM_MQ_Config" destination="USESB.QUOTEDETAILS.REQUEST" sendCorrelationId="ALWAYS">
+			<reconnect frequency="10000" count="3"/>
+			<ibm-mq:message correlationId="#[correlationId]" sendContentType="false" sendEncoding="false">
+				<ibm-mq:reply-to destination="USESB.QUOTEDETAILS.REPLY" />
+			</ibm-mq:message>
+			<ibm-mq:publish-configuration timeToLive="1" timeToLiveUnit="MINUTES" persistentDelivery="true"/>
+			<ibm-mq:consume-configuration maximumWait="90" ackMode="IMMEDIATE" maximumWaitUnit="SECONDS"/>
+		</ibm-mq:publish-consume>
+		<logger level="INFO" doc:name="Logger" doc:id="0f039479-3bad-4c34-960e-bf8826701aa5" message="Response from IIB with correlation id -- #[correlationId] - #[payload]"/>
+    	
+    </flow>
+</mule>

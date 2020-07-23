@@ -1,0 +1,37 @@
+#%RAML 1.0
+title: iib-connect-test
+version: 1.0
+baseUri: http://localhost:8081/iib-connect
+
+mediaType: application/json
+
+/v1:
+  /testMq:
+   post:
+    description: Get quote line details from sap
+    body: 
+      application/json:
+        example: !include examples/line_item-request.json
+    responses:
+      200: 
+        body:
+          application/json:
+            example: !include examples/line_item-response.json    
+      400:
+        body: 
+         application/json:
+          example: |
+           {
+            "message": "Bad Request"
+           }
+      404:
+        body: 
+         application/json:
+          example: |
+           {
+            "message": "Resource not found"
+           }
+      500:
+        body: 
+          application/json:
+  

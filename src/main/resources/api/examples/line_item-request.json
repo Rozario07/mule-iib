@@ -1,0 +1,14 @@
+{
+	"quoteDetailsRequest": {
+		"soldToAccountNumber": "0000184927",
+		"quoteNumber": "5002004598",
+		"sapInstance": "CL2",
+		"salesOrg": "0018",
+		"inquiry": "X",
+		"sortField": "2",
+		"sortDirection": "D",
+		"distributionChannelCode": "02",
+		"startIndex": "1",
+		"retRecords": "999"
+	}
+}
